@@ -9,6 +9,8 @@
 #include "web_video_server/ros_compressed_streamer.h"
 #include "web_video_server/jpeg_streamers.h"
 #include "web_video_server/vp8_streamer.h"
+#include "web_video_server/h264_streamer.h"
+#include "web_video_server/vp9_streamer.h"
 #include "async_web_server_cpp/http_reply.hpp"
 
 namespace web_video_server
@@ -42,7 +44,11 @@ WebVideoServer::WebVideoServer(ros::NodeHandle &nh, ros::NodeHandle &private_nh)
     nh_(nh), handler_group_(
         async_web_server_cpp::HttpReply::stock_reply(async_web_server_cpp::HttpReply::not_found))
 {
+#if ROS_VERSION_MINIMUM(1, 13, 1) || defined USE_STEADY_TIMER
+  cleanup_timer_ = nh.createSteadyTimer(ros::WallDuration(0.5), boost::bind(&WebVideoServer::cleanup_inactive_streams, this));
+#else
   cleanup_timer_ = nh.createTimer(ros::Duration(0.5), boost::bind(&WebVideoServer::cleanup_inactive_streams, this));
+#endif
 
   private_nh.param("port", port_, 8080);
   private_nh.param("verbose", __verbose, true);
@@ -57,6 +63,8 @@ WebVideoServer::WebVideoServer(ros::NodeHandle &nh, ros::NodeHandle &private_nh)
   stream_types_["mjpeg"] = boost::shared_ptr<ImageStreamerType>(new MjpegStreamerType());
   stream_types_["ros_compressed"] = boost::shared_ptr<ImageStreamerType>(new RosCompressedStreamerType());
   stream_types_["vp8"] = boost::shared_ptr<ImageStreamerType>(new Vp8StreamerType());
+  stream_types_["h264"] = boost::shared_ptr<ImageStreamerType>(new H264StreamerType());
+  stream_types_["vp9"] = boost::shared_ptr<ImageStreamerType>(new Vp9StreamerType());
 
   handler_group_.addHandlerForPath("/", boost::bind(&WebVideoServer::handle_list_streams, this, _1, _2, _3, _4));
   handler_group_.addHandlerForPath("/stream", boost::bind(&WebVideoServer::handle_stream, this, _1, _2, _3, _4));
