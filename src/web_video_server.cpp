@@ -62,6 +62,7 @@ WebVideoServer::WebVideoServer(ros::NodeHandle &nh, ros::NodeHandle &private_nh)
   private_nh.param("server_threads", server_threads, 1);
 
   private_nh.param("ros_threads", ros_threads_, 2);
+  private_nh.param("publish_rate", publish_rate_, -1.0);
 
   private_nh.param<std::string>("default_stream_type", __default_stream_type, "mjpeg");
 
@@ -100,9 +101,34 @@ void WebVideoServer::spin()
 {
   server_->run();
   ROS_INFO_STREAM("Waiting For connections on " << address_ << ":" << port_);
-  ros::MultiThreadedSpinner spinner(ros_threads_);
-  spinner.spin();
+
+  ros::AsyncSpinner spinner(ros_threads_);
+  spinner.start();
+
+  if ( publish_rate_ > 0 ) {
+    ros::Rate r(publish_rate_);
+
+    while( ros::ok() ) {
+      this->restreamFrames( 1.0 / publish_rate_ );
+      r.sleep();
+    }
+  } else {
+    ros::waitForShutdown();
+  }
+
   server_->stop();
+}
+
+void WebVideoServer::restreamFrames( double max_age )
+{
+  boost::mutex::scoped_lock lock(subscriber_mutex_);
+
+  typedef std::vector<boost::shared_ptr<ImageStreamer> >::iterator itr_type;
+
+  for (itr_type itr = image_subscribers_.begin(); itr < image_subscribers_.end(); ++itr)
+    {
+      (*itr)->restreamFrame( max_age );
+    }
 }
 
 void WebVideoServer::cleanup_inactive_streams()
@@ -131,6 +157,28 @@ bool WebVideoServer::handle_stream(const async_web_server_cpp::HttpRequest &requ
   std::string type = request.get_query_param_value_or_default("type", __default_stream_type);
   if (stream_types_.find(type) != stream_types_.end())
   {
+    std::string topic = request.get_query_param_value_or_default("topic", "");
+    // Fallback for topics without corresponding compressed topics
+    if (type == std::string("ros_compressed"))
+    {
+      std::string compressed_topic_name = topic + "/compressed";
+      ros::master::V_TopicInfo topics;
+      ros::master::getTopics(topics);
+      bool did_find_compressed_topic = false;
+      for(ros::master::V_TopicInfo::iterator it = topics.begin(); it != topics.end(); ++it)
+      {
+        if (it->name == compressed_topic_name)
+        {
+          did_find_compressed_topic = true;
+          break;
+        }
+      }
+      if (!did_find_compressed_topic)
+      {
+        ROS_WARN_STREAM("Could not find compressed image topic for " << topic << ", falling back to mjpeg");
+        type = "mjpeg";
+      }
+    }
     boost::shared_ptr<ImageStreamer> streamer = stream_types_[type]->create_streamer(request, connection, nh_);
     streamer->start();
     boost::mutex::scoped_lock lock(subscriber_mutex_);
@@ -160,10 +208,32 @@ bool WebVideoServer::handle_stream_viewer(const async_web_server_cpp::HttpReques
                                           async_web_server_cpp::HttpConnectionPtr connection, const char* begin,
                                           const char* end)
 {
-  std::string type = request.get_query_param_value_or_default("type", "mjpeg");
+  std::string type = request.get_query_param_value_or_default("type", __default_stream_type);
   if (stream_types_.find(type) != stream_types_.end())
   {
     std::string topic = request.get_query_param_value_or_default("topic", "");
+    // Fallback for topics without corresponding compressed topics
+    if (type == std::string("ros_compressed"))
+    {
+
+      std::string compressed_topic_name = topic + "/compressed";
+      ros::master::V_TopicInfo topics;
+      ros::master::getTopics(topics);
+      bool did_find_compressed_topic = false;
+      for(ros::master::V_TopicInfo::iterator it = topics.begin(); it != topics.end(); ++it)
+      {
+        if (it->name == compressed_topic_name)
+        {
+          did_find_compressed_topic = true;
+          break;
+        }
+      }
+      if (!did_find_compressed_topic)
+      {
+        ROS_WARN_STREAM("Could not find compressed image topic for " << topic << ", falling back to mjpeg");
+        type = "mjpeg";
+      }
+    }
 
     async_web_server_cpp::HttpReply::builder(async_web_server_cpp::HttpReply::ok).header("Connection", "close").header(
         "Server", "web_video_server").header("Content-type", "text/html;").write(connection);
