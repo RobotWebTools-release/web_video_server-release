@@ -1,3 +1,26 @@
+## web_video_server (noetic) - 0.2.2-1
+
+The packages in the `web_video_server` repository were released into the `noetic` distro by running `/usr/bin/bloom-release web_video_server --rosdistro noetic --track noetic --new-track` on `Fri, 23 Jul 2021 01:51:54 -0000`
+
+The `web_video_server` package was released.
+
+Version of package(s) in repository `web_video_server`:
+
+- upstream repository: https://github.com/RobotWebTools/web_video_server.git
+- release repository: unknown
+- rosdistro version: `null`
+- old version: `null`
+- new version: `0.2.2-1`
+
+Versions of tools used:
+
+- bloom version: `0.10.7`
+- catkin_pkg version: `0.4.23`
+- rosdep version: `0.21.0`
+- rosdistro version: `0.8.3`
+- vcstools version: `0.1.42`
+
+
 ## web_video_server (melodic) - 0.2.1-1
 
 The packages in the `web_video_server` repository were released into the `melodic` distro by running `/usr/bin/bloom-release web_video_server --ros-distro melodic --track melodic` on `Wed, 05 Jun 2019 07:48:55 -0000`
