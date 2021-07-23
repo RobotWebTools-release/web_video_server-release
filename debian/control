@@ -1,0 +1,12 @@
+Source: ros-noetic-web-video-server
+Section: misc
+Priority: optional
+Maintainer: Russell Toris <rctoris@wpi.edu>
+Build-Depends: debhelper (>= 9.0.0), ffmpeg, libavcodec-dev, libavformat-dev, libavutil-dev, libswscale-dev, ros-noetic-async-web-server-cpp, ros-noetic-catkin, ros-noetic-cv-bridge, ros-noetic-image-transport, ros-noetic-roscpp, ros-noetic-roslib, ros-noetic-sensor-msgs
+Homepage: http://ros.org/wiki/web_video_server
+Standards-Version: 3.9.2
+
+Package: ros-noetic-web-video-server
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, ffmpeg, libavcodec-dev, libavformat-dev, libavutil-dev, libswscale-dev, ros-noetic-async-web-server-cpp, ros-noetic-cv-bridge, ros-noetic-image-transport, ros-noetic-roscpp, ros-noetic-roslib, ros-noetic-sensor-msgs
+Description: HTTP Streaming of ROS Image Topics in Multiple Formats
